@@ -2,7 +2,7 @@ import { css } from '@emotion/css';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
-import { Correlation, GrafanaTheme2 } from '@grafana/data';
+import { Correlation, DataSourceInstanceSettings, GrafanaTheme2 } from '@grafana/data';
 import { DataSourcePicker } from '@grafana/runtime';
 import { Button, HorizontalGroup, PanelContainer, useStyles2 } from '@grafana/ui';
 import { CloseButton } from 'app/core/components/CloseButton/CloseButton';
@@ -22,21 +22,23 @@ const getStyles = (theme: GrafanaTheme2) => ({
 });
 
 interface FormDTO {
-  source: string;
-  target: string;
+  sourceUID: string;
+  targetUID: string;
 }
 
 interface Props {
   onClose: () => void;
-  onSubmit: (correlation: Correlation) => void;
+  onSubmit: (correlation: Omit<Correlation, 'uid'>) => void;
 }
+
+const withDsUID = (fn: Function) => (ds: DataSourceInstanceSettings) => fn(ds.uid);
 
 export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props) => {
   const styles = useStyles2(getStyles);
   const { handleSubmit, control } = useForm<FormDTO>();
 
-  const onSubmit = handleSubmit(async (e) => {
-    externalSubmit({ targetUID: e.target, sourceUID: e.source });
+  const onSubmit = handleSubmit(async ({ targetUID, sourceUID }) => {
+    externalSubmit({ targetUID, sourceUID });
   });
 
   return (
@@ -47,17 +49,17 @@ export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props)
           <HorizontalGroup>
             <Controller
               control={control}
-              name="source"
+              name="sourceUID"
               render={({ field: { onChange, value } }) => (
-                <DataSourcePicker onChange={(v) => onChange(v.uid)} noDefault current={value} />
+                <DataSourcePicker onChange={withDsUID(onChange)} noDefault current={value} />
               )}
             />
             links to:
             <Controller
               control={control}
-              name="target"
+              name="targetUID"
               render={({ field: { onChange, value } }) => (
-                <DataSourcePicker onChange={(v) => onChange(v.uid)} noDefault current={value} />
+                <DataSourcePicker onChange={withDsUID(onChange)} noDefault current={value} />
               )}
             />
           </HorizontalGroup>

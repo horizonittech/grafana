@@ -568,6 +568,7 @@ export interface DataSourceInstanceSettings<T extends DataSourceJsonData = DataS
   type: string;
   name: string;
   meta: DataSourcePluginMeta;
+  readOnly: boolean;
   url?: string;
   jsonData: T;
   username?: string;

@@ -26,14 +26,21 @@ const sortDatasource: SortByFn<CorrelationData> = (a, b, column) =>
 export default function CorrelationsPage() {
   const navModel = useNavModel('correlations');
   const [isAdding, setIsAdding] = useState(false);
-  const { correlations, add, remove } = useCorrelations();
+  const { correlations, add, remove, error } = useCorrelations();
+
+  console.log(correlations);
 
   const RowActions = useCallback(
     ({
       row: {
-        original: { source, target },
+        original: {
+          source: { uid: sourceUID, readOnly },
+          uid,
+        },
       },
-    }: CellProps<CorrelationData, void>) => <DeleteButton onConfirm={() => remove(source.uid, target.uid)} />,
+    }: CellProps<CorrelationData, void>) => (
+      <DeleteButton onConfirm={() => remove({ sourceUID, uid })} disabled={readOnly} />
+    ),
     [remove]
   );
 
@@ -59,8 +66,12 @@ export default function CorrelationsPage() {
 
   const data = useMemo(() => correlations, [correlations]);
 
+  if (error) {
+    return error.stack;
+  }
+
   if (!data) {
-    return null;
+    return <>LOL</>;
   }
 
   return (

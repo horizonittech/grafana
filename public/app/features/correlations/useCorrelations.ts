@@ -1,47 +1,40 @@
-import { noop } from 'lodash';
+import { useState } from 'react';
 import { useAsync } from 'react-use';
 
-import { Correlation, DataSourceApi } from '@grafana/data';
+import { Correlation, DataSourceInstanceSettings } from '@grafana/data';
 import { getDataSourceSrv } from '@grafana/runtime';
 import { useGrafana } from 'app/core/context/GrafanaContext';
 
-const havingUID = (uid: string) => (ds: DataSourceApi) => ds.uid === uid;
-
 export interface CorrelationData extends Omit<Correlation, 'sourceUID' | 'targetUID'> {
-  source: DataSourceApi;
-  target: DataSourceApi;
+  source: DataSourceInstanceSettings;
+  target: DataSourceInstanceSettings;
 }
 
-const toEnrichedCorrelationData = (correlations: Correlation[]): Promise<CorrelationData[]> => {
-  const DSSet = new Set(correlations.flatMap(({ sourceUID, targetUID }) => [sourceUID, targetUID]));
-
-  return Promise.all(Array.from(DSSet, (uid) => getDataSourceSrv().get(uid))).then((datasources) =>
-    correlations.map(({ sourceUID, targetUID, ...correlation }) => ({
-      ...correlation,
-      source: datasources.find(havingUID(sourceUID))!,
-      target: datasources.find(havingUID(targetUID))!,
-    }))
-  );
-};
+const toEnrichedCorrelationData = (correlations: Correlation[]): CorrelationData[] =>
+  correlations.map(({ sourceUID, targetUID, ...correlation }) => ({
+    ...correlation,
+    source: getDataSourceSrv().getInstanceSettings(sourceUID)!,
+    target: getDataSourceSrv().getInstanceSettings(targetUID)!,
+  }));
 
 export const useCorrelations = () => {
-  const {
-    backend: { get },
-  } = useGrafana();
-  const getCorrelations = () => get<Correlation[]>('/api/datasources/correlations').then(toEnrichedCorrelationData);
+  const { backend } = useGrafana();
+  const [a, setA] = useState(Symbol());
 
-  const { loading, value: correlations } = useAsync(getCorrelations);
+  const getCorrelations = () =>
+    backend.get<Correlation[]>('/api/datasources/correlations').then(toEnrichedCorrelationData);
 
-  // const add = (sourceUid: string, correlation: Correlation) => {
-  //   return lastValueFrom(addCorrelation(sourceUid, correlation)).then(reload);
-  // };
+  const reload = () => setA(Symbol());
 
-  // const remove = (sourceUid: string, targetUid: string) => {
-  //   return lastValueFrom(deleteCorrelation(sourceUid, targetUid)).then(reload);
-  // };
+  const { loading, value: correlations, error } = useAsync(getCorrelations, [a]);
 
-  const remove = noop;
-  const add = noop;
+  const add = ({ sourceUID, ...correlation }: Omit<Correlation, 'uid'>) => {
+    return backend.post(`/api/datasources/uid/${sourceUID}/correlations`, correlation).finally(reload);
+  };
 
-  return { loading, correlations, add, remove };
+  const remove = ({ sourceUID, uid }: Pick<Correlation, 'sourceUID' | 'uid'>) => {
+    return backend.delete(`/api/datasources/uid/${sourceUID}/correlations/${uid}`).finally(reload);
+  };
+
+  return { loading, correlations, add, remove, error };
 };
