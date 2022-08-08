@@ -8,6 +8,7 @@ import {
   useTable,
   Column as RTColumn,
   DefaultSortTypes,
+  TableOptions,
 } from 'react-table';
 
 import { GrafanaTheme2 } from '@grafana/data';
@@ -23,9 +24,7 @@ const getStyles = (theme: GrafanaTheme2) => ({
     border-radius: ${theme.shape.borderRadius()};
     border: solid 1px ${theme.colors.border.weak};
     background-color: ${theme.colors.background.secondary};
-
-    td,
-    th {
+    width: 100% td, th {
       padding: ${theme.spacing(1)};
       min-width: ${theme.spacing(3)};
     }
@@ -65,6 +64,7 @@ interface Props<TableData extends object> {
   expandable?: boolean;
   renderExpandedRow?: (row: TableData) => JSX.Element;
   className?: string;
+  getRowId: TableOptions<TableData>['getRowId'];
 }
 
 export function AnotherTable<TableData extends object>({
@@ -73,6 +73,7 @@ export function AnotherTable<TableData extends object>({
   expandable = false,
   columns,
   renderExpandedRow,
+  getRowId,
 }: Props<TableData>) {
   const styles = useStyles2(getStyles);
   const tableColumns = useMemo<Array<RTColumn<TableData>>>(() => {
@@ -101,6 +102,9 @@ export function AnotherTable<TableData extends object>({
     {
       columns: tableColumns,
       data,
+      autoResetExpanded: false,
+      autoResetSortBy: false,
+      getRowId,
     },
     useSortBy,
     useExpanded
@@ -138,25 +142,26 @@ export function AnotherTable<TableData extends object>({
 
       <tbody {...getTableBodyProps()}>
         {rows.map((row, rowIndex) => {
+          const className = cx(rowIndex % 2 === 0 && styles.evenRow);
           const { key, ...otherRowProps } = row.getRowProps();
+          console.log({ key });
 
           return (
-            // .getRowProps() returns with a key as well, so the <tr> here will actually have a key.
-            // eslint-disable-next-line react/jsx-key
             <Fragment key={key}>
-              <tr className={cx(rowIndex % 2 === 0 && styles.evenRow)} {...otherRowProps}>
+              <tr className={className} {...otherRowProps}>
                 {row.cells.map((cell) => {
+                  const { key, ...otherCellProps } = cell.getCellProps();
                   return (
-                    // .getCellProps() will return with a key as well, so the <td> here will actually have a key.
-                    // eslint-disable-next-line react/jsx-key
-                    <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+                    <td key={key} {...otherCellProps}>
+                      {cell.render('Cell')}
+                    </td>
                   );
                 })}
               </tr>
               {
                 // @ts-expect-error react-table doesn't ship with useExpanded types and we can't use declaration merging without affecting the table viz
                 row.isExpanded && (
-                  <tr className={cx(rowIndex % 2 === 0 && styles.evenRow)} {...otherRowProps}>
+                  <tr className={className} {...otherRowProps}>
                     <td colSpan={row.cells.length}>{renderExpandedRow?.(row.original)}</td>
                   </tr>
                 )

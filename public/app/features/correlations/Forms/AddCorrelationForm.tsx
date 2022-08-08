@@ -1,6 +1,6 @@
 import { css } from '@emotion/css';
 import React from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 
 import { Correlation, DataSourceInstanceSettings, GrafanaTheme2 } from '@grafana/data';
 import { DataSourcePicker } from '@grafana/runtime';
@@ -8,6 +8,8 @@ import { Button, HorizontalGroup, PanelContainer, useStyles2 } from '@grafana/ui
 import { CloseButton } from 'app/core/components/CloseButton/CloseButton';
 
 import { CorrelationDetailsFormPart } from './CorrelationDetailsFormPart';
+import { FormDTO } from './types';
+import { useCorrelationForm } from './useCorrelationForm';
 
 const getStyles = (theme: GrafanaTheme2) => ({
   panelContainer: css`
@@ -21,11 +23,6 @@ const getStyles = (theme: GrafanaTheme2) => ({
   `,
 });
 
-interface FormDTO {
-  sourceUID: string;
-  targetUID: string;
-}
-
 interface Props {
   onClose: () => void;
   onSubmit: (correlation: Omit<Correlation, 'uid'>) => void;
@@ -35,16 +32,12 @@ const withDsUID = (fn: Function) => (ds: DataSourceInstanceSettings) => fn(ds.ui
 
 export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props) => {
   const styles = useStyles2(getStyles);
-  const { handleSubmit, control } = useForm<FormDTO>();
-
-  const onSubmit = handleSubmit(async ({ targetUID, sourceUID }) => {
-    externalSubmit({ targetUID, sourceUID });
-  });
+  const { control, handleSubmit, register } = useCorrelationForm<FormDTO>({ onSubmit: externalSubmit });
 
   return (
     <PanelContainer className={styles.panelContainer}>
       <CloseButton onClick={onClose} />
-      <form onSubmit={onSubmit}>
+      <form onSubmit={handleSubmit}>
         <div>
           <HorizontalGroup>
             <Controller
@@ -65,7 +58,7 @@ export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props)
           </HorizontalGroup>
         </div>
 
-        <CorrelationDetailsFormPart />
+        <CorrelationDetailsFormPart register={register} />
 
         <div className={styles.buttonRow}>
           <Button variant="primary" icon="plus" type="submit">

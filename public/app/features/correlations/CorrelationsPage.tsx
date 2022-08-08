@@ -10,15 +10,9 @@ import { Page } from 'app/core/components/Page/Page';
 
 import { useNavModel } from '../../core/hooks/useNavModel';
 
-import { AddCorrelationForm } from './AddCorrelationForm';
-import { CorrelationDetailsFormPart } from './CorrelationDetailsFormPart';
+import { AddCorrelationForm } from './Forms/AddCorrelationForm';
+import { EditCorrelationForm } from './Forms/EditCorrelationForm';
 import { CorrelationData, useCorrelations } from './useCorrelations';
-
-const styles = {
-  table: css`
-    width: 100%;
-  `,
-};
 
 const sortDatasource: SortByFn<CorrelationData> = (a, b, column) =>
   a.values[column].name.localeCompare(b.values[column].name);
@@ -26,7 +20,7 @@ const sortDatasource: SortByFn<CorrelationData> = (a, b, column) =>
 export default function CorrelationsPage() {
   const navModel = useNavModel('correlations');
   const [isAdding, setIsAdding] = useState(false);
-  const { correlations, add, remove, error } = useCorrelations();
+  const { correlations, add, remove, edit, error } = useCorrelations();
 
   console.log(correlations);
 
@@ -105,11 +99,17 @@ export default function CorrelationsPage() {
 
           {data.length >= 1 && (
             <AnotherTable
-              renderExpandedRow={(row) => <CorrelationDetailsFormPart />}
+              renderExpandedRow={({ target, source, ...correlation }) => (
+                <EditCorrelationForm
+                  defaultValues={{ sourceUID: source.uid, ...correlation }}
+                  onSubmit={edit}
+                  readOnly={source.readOnly}
+                />
+              )}
               columns={columns}
               data={data}
-              className={styles.table}
               expandable
+              getRowId={(correlation) => `${correlation.source.uid}-${correlation.uid}`}
             />
           )}
         </Page.Contents>
