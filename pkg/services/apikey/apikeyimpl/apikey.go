@@ -13,6 +13,15 @@ type Service struct {
 }
 
 func ProvideService(db db.DB, cfg *setting.Cfg) apikey.Service {
+	if cfg.IsFeatureToggleEnabled("newDBLibrary") {
+		return &Service{
+			store: &sqlxStore{
+				sqlxdb: db.GetDB(),
+				db:     db,
+				cfg:    cfg,
+			},
+		}
+	}
 	return &Service{store: &sqlStore{db: db, cfg: cfg}}
 }
 

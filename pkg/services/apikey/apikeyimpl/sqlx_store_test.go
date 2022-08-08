@@ -15,21 +15,7 @@ import (
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 )
 
-func mockTimeNow() {
-	var timeSeed int64
-	timeNow = func() time.Time {
-		loc := time.FixedZone("MockZoneUTC-5", -5*60*60)
-		fakeNow := time.Unix(timeSeed, 0).In(loc)
-		timeSeed++
-		return fakeNow
-	}
-}
-
-func resetTimeNow() {
-	timeNow = time.Now
-}
-
-func TestIntegrationApiKeyDataAccess(t *testing.T) {
+func TestIntegrationSQLxApiKeyDataAccess(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -38,7 +24,7 @@ func TestIntegrationApiKeyDataAccess(t *testing.T) {
 
 	t.Run("Testing API Key data access", func(t *testing.T) {
 		db := sqlstore.InitTestDB(t)
-		ss := &sqlStore{db: db, cfg: db.Cfg}
+		ss := &sqlxStore{db: db, cfg: db.Cfg, sqlxdb: db.GetDB()}
 
 		t.Run("Given saved api key", func(t *testing.T) {
 			cmd := apikey.AddCommand{OrgId: 1, Name: "hello", Key: "asd"}
