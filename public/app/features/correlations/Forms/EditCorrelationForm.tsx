@@ -1,7 +1,7 @@
 import React from 'react';
 import { SubmitHandler } from 'react-hook-form';
 
-import { Button } from '@grafana/ui';
+import { Button, HorizontalGroup } from '@grafana/ui';
 
 import { CorrelationDetailsFormPart } from './CorrelationDetailsFormPart';
 import { EditFormDTO } from './types';
@@ -14,16 +14,23 @@ interface Props {
 }
 
 export const EditCorrelationForm = ({ onSubmit, defaultValues, readOnly = false }: Props) => {
-  const { handleSubmit, register } = useCorrelationForm<EditFormDTO>({ onSubmit, defaultValues });
+  const { handleSubmit, register, errors } = useCorrelationForm<EditFormDTO>({ onSubmit, defaultValues });
+
+  console.log({ errors });
 
   return (
-    <form onSubmit={readOnly ? () => void 0 : handleSubmit}>
+    <form onSubmit={readOnly ? (e) => e.preventDefault() : handleSubmit}>
       <input type="hidden" {...register('uid')} />
       <input type="hidden" {...register('sourceUID')} />
-      <CorrelationDetailsFormPart register={register} readOnly={readOnly} />
-      <Button type="submit" disabled={readOnly}>
-        Save
-      </Button>
+      <CorrelationDetailsFormPart register={register} readOnly={readOnly} correlation={defaultValues} errors={errors} />
+
+      {!readOnly && (
+        <HorizontalGroup disabled={readOnly} justify="flex-end">
+          <Button variant="primary" icon="save" type="submit">
+            Save
+          </Button>
+        </HorizontalGroup>
+      )}
     </form>
   );
 };

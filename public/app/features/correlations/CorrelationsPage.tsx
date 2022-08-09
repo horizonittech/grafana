@@ -1,17 +1,19 @@
 import { css } from '@emotion/css';
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { ComponentProps, memo, useCallback, useMemo, useState } from 'react';
 import { CellProps, SortByFn } from 'react-table';
 
 import { GrafanaTheme2 } from '@grafana/data';
-import { AnotherTable, Button, DeleteButton, HorizontalGroup, useStyles2 } from '@grafana/ui';
-import { Column } from '@grafana/ui/src/components/AnotherTable';
+import { Badge, Button, DeleteButton, HorizontalGroup, useStyles2 } from '@grafana/ui';
 import EmptyListCTA from 'app/core/components/EmptyListCTA/EmptyListCTA';
 import { Page } from 'app/core/components/Page/Page';
+import { contextSrv } from 'app/core/core';
+import { AccessControlAction } from 'app/types';
 
 import { useNavModel } from '../../core/hooks/useNavModel';
 
 import { AddCorrelationForm } from './Forms/AddCorrelationForm';
 import { EditCorrelationForm } from './Forms/EditCorrelationForm';
+import { Column, Table } from './components/Table';
 import { CorrelationData, useCorrelations } from './useCorrelations';
 
 const sortDatasource: SortByFn<CorrelationData> = (a, b, column) =>
@@ -21,8 +23,16 @@ export default function CorrelationsPage() {
   const navModel = useNavModel('correlations');
   const [isAdding, setIsAdding] = useState(false);
   const { correlations, add, remove, edit, error } = useCorrelations();
+  const canAddCorrelation = contextSrv.hasPermission(AccessControlAction.DataSourcesCreate);
+  console.log({ canAddCorrelation });
 
-  console.log(correlations);
+  const handleAdd = useCallback<ComponentProps<typeof AddCorrelationForm>['onSubmit']>(
+    async (correlation) => {
+      await add(correlation);
+      setIsAdding(false);
+    },
+    [add]
+  );
 
   const RowActions = useCallback(
     ({
@@ -32,14 +42,17 @@ export default function CorrelationsPage() {
           uid,
         },
       },
-    }: CellProps<CorrelationData, void>) => (
-      <DeleteButton onConfirm={() => remove({ sourceUID, uid })} disabled={readOnly} />
-    ),
+    }: CellProps<CorrelationData, void>) => !readOnly && <DeleteButton onConfirm={() => remove({ sourceUID, uid })} />,
     [remove]
   );
 
   const columns = useMemo<Array<Column<CorrelationData>>>(
     () => [
+      {
+        id: 'info',
+        cell: InfoCell,
+        shrink: true,
+      },
       {
         id: 'source',
         header: 'Source',
@@ -86,19 +99,19 @@ export default function CorrelationsPage() {
               <HorizontalGroup justify="space-between">
                 <div>
                   <h4>Correlations</h4>
-                  <p>description</p>
+                  <p>Define how data living in different data sources relates to each other.</p>
                 </div>
                 <Button icon="plus" onClick={() => setIsAdding(true)} disabled={isAdding}>
-                  Add new
+                  Add
                 </Button>
               </HorizontalGroup>
             </div>
           )}
 
-          {isAdding && <AddCorrelationForm onClose={() => setIsAdding(false)} onSubmit={add} />}
+          {isAdding && <AddCorrelationForm onClose={() => setIsAdding(false)} onSubmit={handleAdd} />}
 
           {data.length >= 1 && (
-            <AnotherTable
+            <Table
               renderExpandedRow={({ target, source, ...correlation }) => (
                 <EditCorrelationForm
                   defaultValues={{ sourceUID: source.uid, ...correlation }}
@@ -146,4 +159,21 @@ const DataSourceCell = memo(
   ({ cell: { value } }, { cell: { value: prevValue } }) => {
     return value.type === prevValue.type && value.name === prevValue.name;
   }
+);
+
+const noWrap = css`
+  white-space: nowrap;
+`;
+
+const InfoCell = memo(
+  function InfoCell({ ...props }: CellProps<CorrelationData, void>) {
+    const readOnly = props.row.original.source.readOnly;
+
+    if (readOnly) {
+      return <Badge text="Read only" color="red" className={noWrap} />;
+    } else {
+      return null;
+    }
+  },
+  (props, prevProps) => props.row.original.source.readOnly === prevProps.row.original.source.readOnly
 );

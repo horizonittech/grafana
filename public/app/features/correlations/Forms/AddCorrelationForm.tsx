@@ -4,7 +4,7 @@ import { Controller } from 'react-hook-form';
 
 import { Correlation, DataSourceInstanceSettings, GrafanaTheme2 } from '@grafana/data';
 import { DataSourcePicker } from '@grafana/runtime';
-import { Button, HorizontalGroup, PanelContainer, useStyles2 } from '@grafana/ui';
+import { Button, Field, HorizontalGroup, PanelContainer, useStyles2 } from '@grafana/ui';
 import { CloseButton } from 'app/core/components/CloseButton/CloseButton';
 
 import { CorrelationDetailsFormPart } from './CorrelationDetailsFormPart';
@@ -17,10 +17,6 @@ const getStyles = (theme: GrafanaTheme2) => ({
     padding: ${theme.spacing(1)};
     margin-bottom: ${theme.spacing(2)};
   `,
-  buttonRow: css`
-    display: flex;
-    justify-content: flex-end;
-  `,
 });
 
 interface Props {
@@ -32,7 +28,7 @@ const withDsUID = (fn: Function) => (ds: DataSourceInstanceSettings) => fn(ds.ui
 
 export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props) => {
   const styles = useStyles2(getStyles);
-  const { control, handleSubmit, register } = useCorrelationForm<FormDTO>({ onSubmit: externalSubmit });
+  const { control, handleSubmit, register, errors } = useCorrelationForm<FormDTO>({ onSubmit: externalSubmit });
 
   return (
     <PanelContainer className={styles.panelContainer}>
@@ -40,31 +36,60 @@ export const AddCorrelationForm = ({ onClose, onSubmit: externalSubmit }: Props)
       <form onSubmit={handleSubmit}>
         <div>
           <HorizontalGroup>
-            <Controller
-              control={control}
-              name="sourceUID"
-              render={({ field: { onChange, value } }) => (
-                <DataSourcePicker onChange={withDsUID(onChange)} noDefault current={value} />
-              )}
-            />
+            <Field
+              label="Source data source"
+              htmlFor="source"
+              invalid={!!errors.sourceUID}
+              error={errors.sourceUID?.message}
+            >
+              <Controller
+                control={control}
+                name="sourceUID"
+                rules={{ required: { value: true, message: 'This field is required.' } }}
+                render={({ field: { onChange, value } }) => (
+                  <DataSourcePicker
+                    onChange={withDsUID(onChange)}
+                    noDefault
+                    current={value}
+                    inputId="source"
+                    width={32}
+                  />
+                )}
+              />
+            </Field>
             links to:
-            <Controller
-              control={control}
-              name="targetUID"
-              render={({ field: { onChange, value } }) => (
-                <DataSourcePicker onChange={withDsUID(onChange)} noDefault current={value} />
-              )}
-            />
+            <Field
+              label="Target data source"
+              htmlFor="target"
+              invalid={!!errors.targetUID}
+              error={errors.targetUID?.message}
+            >
+              <Controller
+                control={control}
+                name="targetUID"
+                rules={{ required: { value: true, message: 'This field is required.' } }}
+                render={({ field: { onChange, value } }) => (
+                  <DataSourcePicker
+                    onChange={withDsUID(onChange)}
+                    noDefault
+                    current={value}
+                    inputId="target"
+                    invalid={!!errors.targetUID}
+                    width={32}
+                  />
+                )}
+              />
+            </Field>
           </HorizontalGroup>
         </div>
 
-        <CorrelationDetailsFormPart register={register} />
+        <CorrelationDetailsFormPart errors={errors} register={register} />
 
-        <div className={styles.buttonRow}>
+        <HorizontalGroup justify="flex-end">
           <Button variant="primary" icon="plus" type="submit">
             Add
           </Button>
-        </div>
+        </HorizontalGroup>
       </form>
     </PanelContainer>
   );

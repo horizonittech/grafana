@@ -29,6 +29,7 @@ export class PublicDashboardDataSource extends DataSourceApi<any> {
       uid: PublicDashboardDataSource.resolveUid(datasource),
       jsonData: {},
       access: 'proxy',
+      readOnly: false,
     });
 
     this.interval = '1min';

@@ -12,19 +12,18 @@ import {
 } from 'react-table';
 
 import { GrafanaTheme2 } from '@grafana/data';
+import { Icon, IconButton, useStyles2 } from '@grafana/ui';
 
-import { useStyles2 } from '../../themes';
-import { Icon } from '../Icon/Icon';
-import { IconButton } from '../IconButton/IconButton';
-
-import { getColumns } from './Table.utils';
+import { getColumns } from './utils';
 
 const getStyles = (theme: GrafanaTheme2) => ({
   table: css`
     border-radius: ${theme.shape.borderRadius()};
     border: solid 1px ${theme.colors.border.weak};
     background-color: ${theme.colors.background.secondary};
-    width: 100% td, th {
+    width: 100%;
+    td,
+    th {
       padding: ${theme.spacing(1)};
       min-width: ${theme.spacing(3)};
     }
@@ -67,7 +66,11 @@ interface Props<TableData extends object> {
   getRowId: TableOptions<TableData>['getRowId'];
 }
 
-export function AnotherTable<TableData extends object>({
+/**
+ * non-viz table component.
+ * Will need most likely to be moved in @grafana/ui
+ */
+export function Table<TableData extends object>({
   data,
   className,
   expandable = false,

@@ -5,9 +5,14 @@ interface UseCorrelationFormOptions<T> {
   defaultValues?: UnpackNestedValue<DeepPartial<T>>;
 }
 export const useCorrelationForm = <T>({ onSubmit, defaultValues }: UseCorrelationFormOptions<T>) => {
-  const { handleSubmit: submit, control, register } = useForm<T>({ defaultValues });
+  const {
+    handleSubmit: submit,
+    control,
+    register,
+    formState: { errors },
+  } = useForm<T>({ defaultValues });
 
   const handleSubmit = submit(onSubmit);
 
-  return { control, handleSubmit, register };
+  return { control, handleSubmit, register, errors };
 };
