@@ -15,7 +15,7 @@ func TestGetMetadata(t *testing.T) {
 		version string
 		mode    config.VersionMode
 	}{
-		{"v1.2.3", config.ReleaseMode},
+		{"v1.2.3", config.TagMode},
 		{"v1.2.3-12345pre", config.PullRequestMode},
 		{"v1.2.3-beta1", config.BetaReleaseMode},
 		{"v1.2.3-test1", config.TestReleaseMode},
@@ -57,13 +57,13 @@ func testMetadata(t *testing.T, dir string, version string, mode config.VersionM
 	})
 
 	t.Run("with a valid release mode from the built-in list", func(t *testing.T) {
-		expMode := metadata.ReleaseMode
+		expMode := metadata.ReleaseMode.Mode
 		require.NoError(t, err)
 		require.Equal(t, expMode, mode)
 	})
 
 	t.Run("with a valid configuration from a JSON file", func(t *testing.T) {
-		version, err := config.GetVersion(metadata.ReleaseMode)
+		version, err := config.GetVersion(metadata.ReleaseMode.Mode)
 		require.NoError(t, err)
 		parsed := verModeFromConfig(t, metadata)
 		require.EqualValues(t, parsed, *version)
@@ -77,7 +77,7 @@ func verModeFromConfig(t *testing.T, metadata *config.Metadata) config.Version {
 
 	require.NoError(t, json.Unmarshal(configJSON, &metadataComp))
 
-	return metadataComp[metadata.ReleaseMode]
+	return metadataComp[metadata.ReleaseMode.Mode]
 }
 
 func createVersionJSON(t *testing.T, version string, file string, mode config.VersionMode) {
@@ -85,7 +85,7 @@ func createVersionJSON(t *testing.T, version string, file string, mode config.Ve
 
 	metadata := &config.Metadata{
 		GrafanaVersion: version,
-		ReleaseMode:    mode,
+		ReleaseMode:    config.ReleaseMode{Mode: mode},
 	}
 
 	//nolint:gosec

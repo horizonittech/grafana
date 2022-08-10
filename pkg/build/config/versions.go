@@ -74,7 +74,7 @@ var Versions = VersionMap{
 		PackagesBucketEnterprise2: "grafana-downloads-enterprise2",
 		CDNAssetsBucket:           "grafana-static-assets",
 	},
-	ReleaseMode: {
+	TagMode: {
 		Variants: []Variant{
 			VariantArmV6,
 			VariantArmV7,
