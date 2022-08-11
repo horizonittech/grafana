@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/infra/metrics"
 	"github.com/grafana/grafana/pkg/login"
@@ -273,23 +274,9 @@ func (hs *HTTPServer) buildExternalUserInfo(token *oauth2.Token, userInfo *socia
 		Groups:     userInfo.Groups,
 	}
 
-	if userInfo.Role != "" && !hs.Cfg.OAuthSkipOrgRoleUpdateSync {
-		rt := org.RoleType(userInfo.Role)
-		if rt.IsValid() {
-			// The user will be assigned a role in either the auto-assigned organization or in the default one
-			var orgID int64
-			if hs.Cfg.AutoAssignOrg && hs.Cfg.AutoAssignOrgId > 0 {
-				orgID = int64(hs.Cfg.AutoAssignOrgId)
-				plog.Debug("The user has a role assignment and organization membership is auto-assigned",
-					"role", userInfo.Role, "orgId", orgID)
-			} else {
-				orgID = int64(1)
-				plog.Debug("The user has a role assignment and organization membership is not auto-assigned",
-					"role", userInfo.Role, "orgId", orgID)
-			}
-			extUser.OrgRoles[orgID] = rt
-		}
-	}
+	// the role for each organization is taken from token claim as defined in Cfg with OAuthOrgRolesAttributeName
+	orgRoles := getOrgsRolesFromToken(token, hs.Cfg.OAuthOrgRolesAttributeName)
+	extUser.OrgRoles = orgRoles
 
 	return extUser
 }
@@ -355,4 +342,56 @@ func (hs *HTTPServer) handleOAuthLoginErrorWithRedirect(ctx *models.ReqContext, 
 
 	info.Error = err
 	hs.HooksService.RunLoginHook(&info, ctx)
+}
+
+func getOrgsRolesFromToken(token *oauth2.Token, attribute string) map[int64]org.RoleType {
+
+	claim, err := getClaim(token.AccessToken, attribute)
+	if err != nil {
+		oauthLogger.Error("failed to get claim from jwt", "err", err)
+		return nil
+	}
+
+	orgRolesClaim, ok := claim.(map[string]interface{})
+	if !ok {
+		oauthLogger.Error("Incorrect type for claim ")
+		return nil
+	}
+
+	orgRoles := make(map[int64]org.RoleType, 0)
+	for role, orgs := range orgRolesClaim {
+		switch orgClaim := orgs.(type) {
+		case []interface{}:
+			for _, t := range orgClaim {
+				v := t.(float64)
+				orgRoles[int64(v)] = org.RoleType(role)
+			}
+		}
+	}
+	return orgRoles
+}
+
+// GetClaim retrieves the claim for given key from the jwt token
+func getClaim(tokenString string, key string) (interface{}, error) {
+	claims, err := getClaims(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	if claims[key] == nil {
+		return nil, err
+	}
+	return claims[key], nil
+}
+
+// getClaims retrieves the claims from the jwt token
+func getClaims(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, nil)
+	if err != nil && err.(*jwt.ValidationError).Errors&jwt.ValidationErrorMalformed != 0 {
+		return nil, err
+	}
+	if token == nil {
+		return nil, err
+	}
+	jwtClaims := token.Claims.(jwt.MapClaims)
+	return jwtClaims, nil
 }

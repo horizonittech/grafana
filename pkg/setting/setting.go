@@ -410,6 +410,7 @@ type Cfg struct {
 	AutoAssignOrgId            int
 	AutoAssignOrgRole          string
 	OAuthSkipOrgRoleUpdateSync bool
+	OAuthOrgRolesAttributeName string
 
 	// ExpressionsEnabled specifies whether expressions are enabled.
 	ExpressionsEnabled bool
@@ -1284,6 +1285,7 @@ func readAuthSettings(iniFile *ini.File, cfg *Cfg) (err error) {
 	cfg.OAuthCookieMaxAge = auth.Key("oauth_state_cookie_max_age").MustInt(600)
 	SignoutRedirectUrl = valueAsString(auth, "signout_redirect_url", "")
 	cfg.OAuthSkipOrgRoleUpdateSync = auth.Key("oauth_skip_org_role_update_sync").MustBool(false)
+	cfg.OAuthOrgRolesAttributeName = valueAsString(auth, "oauth_org_roles_attribute_name", "")
 
 	// SigV4
 	SigV4AuthEnabled = auth.Key("sigv4_auth_enabled").MustBool(false)
